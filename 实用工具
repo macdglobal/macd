@@ -1,0 +1,165 @@
+// SPDX-License-Identifier：MIT
+语用固结度^ 0。6。0 ;
+编译实验ABIEncoderV2;
+
+图书馆实用程序{
+
+    uint256 常量GROUP_ORDER = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001 ;
+    uint256 常数FIELD_ORDER = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47 ;
+
+    函数gAdd（uint256  x，uint256  y）内部 纯 返回（uint256）{
+        返回 addmod（x，y，GROUP_ORDER）;
+    }
+
+    函数gMul（uint256  x，uint256  y）内部 纯 收益（uint256）{
+        返回 mulmod（x，y，GROUP_ORDER）;
+    }
+
+    函数gInv（uint256  x）内部 视图 返回（uint256）{
+        返回 gExp（x，GROUP_ORDER -  2）;
+    }
+
+    函数gMod（uint256  x）内部 纯 返回（uint256）{
+        返回x ％ GROUP_ORDER;
+    }
+
+    函数gSub（uint256  x，uint256  y）内部 纯 返回（uint256）{
+        返回x > = y ？x -  y：GROUP_ORDER - y + x;
+    }
+
+    函数gNeg（uint256  x）内部 纯 收益（uint256）{
+        返回GROUP_ORDER - x;
+    }
+
+    函数gExp（uint256  base，uint256 指数）内部 视图 返回（uint256 输出）{
+        uint256 order = GROUP_ORDER;
+        部件 {
+            令m：=  mload（0x40）
+            mstore（m，0x20）
+            mstore（添加（m，0x20），0x20）
+            mstore（添加（m，0x40），0x20）
+            mstore（添加（m，0x60），基本）
+            mstore（添加（m，0x80），指数）
+            mstore（添加（m，0xa0），顺序）
+            如果 iszero（staticcall（gas（），0x05，m，0xc0，m，0x20））{ //静态调用或调用？
+                复归（0，0）
+            }
+            输出：=  mload（m）
+        }
+    }
+
+    函数fieldExp（uint256  base，uint256  exponent）内部 视图 返回（uint256  output）{ //警告：mod p，而不是q
+        uint256 order = FIELD_ORDER;
+        部件 {
+            令m：=  mload（0x40）
+            mstore（m，0x20）
+            mstore（添加（m，0x20），0x20）
+            mstore（添加（m，0x40），0x20）
+            mstore（添加（m，0x60），基本）
+            mstore（添加（m，0x80），指数）
+            mstore（添加（m，0xa0），顺序）
+            如果 iszero（staticcall（gas（），0x05，m，0xc0，m，0x20））{ //静态调用或调用？
+                复归（0，0）
+            }
+            输出：=  mload（m）
+        }
+    }
+
+    struct G1Point {
+        字节32 x;
+        bytes32 y;
+    }
+
+    函数pAdd（G1Point存储器p1，G1Point存储器p2）内部 视图 返回（G1Point存储器r）{
+        部件 {
+            令m：=  mload（0x40）
+            mstore（m，mload（p1））
+            mstore（附加（M，0x20的），MLOAD（附加（P1，为0x20）））
+            mstore（添加（m，0x40），mload（p2））
+            mstore（附加（M，0x60的），MLOAD（附加（P2，为0x20）））
+            //所需的EC ADD指令的地址：0x06
+            //参考：https：//eips.ethereum.org/EIPS/eip-196#implementation
+            如果 iszero（staticcall（gas（），0x06，m，0x80，r，0x40））{
+                复归（0，0）
+            }
+        }
+    }
+
+    函数pMul（G1Point存储器p，uint256  s）内部 视图 返回（G1Point存储器r）{
+        部件 {
+            令m：=  mload（0x40）
+            mstore（m，mload（p））
+            mstore（添加（m，0x20），mload（添加（p，0x20）））
+            mstore（添加（m，0x40），s）
+            //所需的EC MUL指令的地址：0x07
+            //参考：https：//eips.ethereum.org/EIPS/eip-196#implementation
+            如果 iszero（staticcall（gas（），0x07，m，0x60，r，0x40））{
+                复归（0，0）
+            }
+        }
+    }
+
+    函数pNeg（G1Point存储器p）内部 纯 返回值（G1Point存储器）{
+        返回 G1Point（px，bytes32（FIELD_ORDER -  uint256（py）））; // py应该已经减少了mod P？
+    }
+
+    函数pEqual（G1Point存储器p1，G1Point存储器p2）内部 纯 返回（bool）{
+        返回p1.x == p2.x && p1.y == p2.y;
+    }
+
+    函数g（）内部 纯 返回（G1Point内存）{
+        返回 G1Point（0x077da99d806abd13c9f15ece5398525119d11e11e9836b2ee7d23f6159ad87d4，0x01485efa927f2ad41bff567eec88f32fb0a0f706588b4e41a8d587d008b7f875）;
+    }
+
+    函数h（）内部 纯 返回值（G1Point内存）{
+        返回 G1Point（0x01b7de3dcf359928dd19f643d54dc487478b68a5b2634f9f1903c9fb78331aef，0x2bda7d3ae6a557c716477c108be0d0f94abc6c4dc6b1bd93caccbcceaaa71d6b）;
+    }
+
+    函数mapInto（uint256  seed）内部 视图 返回（G1Point内存）{
+        uint256 y;
+        而（true）{
+            uint256 ySquared = fieldExp（seed，3）+  3 ; //用addmod代替add：浪费气体，加上函数开销成本
+            y =  fieldExp（ySquared，（FIELD_ORDER +  1）/  4）;
+            if（fieldExp（y，2）== ySquared）{
+                休息;
+            }
+            种子+ =  1 ;
+        }
+        返回 G1Point（bytes32（seed），bytes32（y））;
+    }
+
+    函数mapInto（字符串 存储器 输入）内部 视图 返回（G1Point存储器）{
+        返回 mapInto（uint256（keccak256（ABI。encodePacked（输入））） ％ FIELD_ORDER）;
+    }
+
+    函数mapInto（字符串 存储器 输入，uint256  i）内部 视图 返回（G1Point存储器）{
+        返回 mapInto（uint256（keccak256（ABI。encodePacked（输入，I））） ％ FIELD_ORDER）;
+    }
+
+    函数片（字节 内存 输入，uint256 开始）内部 纯 返回值（bytes32 结果）{
+        部件 {
+            令m：=  mload（0x40）
+            mstore（m，mload（add（add（input，0x20），start）））//为什么只有0x20？
+            结果：=  mload（m）
+        }
+    }
+
+    函数uint2str（uint  _i）内部 纯 返回值（字符串 存储器 _uintAsString）{
+        如果（_i ==  0）{
+            返回 “ 0”；
+        }
+        uint j = _i;
+        uint len;
+        而（j ！=  0）{
+            len ++ ;
+            j / =  10 ;
+        }
+        字节 内存bstr =新 字节（len）;
+        uint k = len -  1；
+        而（_i ！=  0）{
+            BSTR [K - ] = 字节（UINT8（48  + _i ％ 10））;
+            _i / =  10 ;
+        }
+        返回 字符串（bstr）;
+    }
+}
